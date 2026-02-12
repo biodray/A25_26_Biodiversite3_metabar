@@ -1,9 +1,13 @@
 Locus	Sens	truncQ	truncLen	trimLeft	trimRight	maxLen	minLen	minQ	maxEE	minOverlap	minESVLen	maxESVLen
-COI	R1	10	0	0	0	Inf	150	0	1	30	300	330
-COI	R2	10	0	0	0	Inf	150	0	1			
+COIB1	R1	10	0	0	0	Inf	120	0	1	20	200	230
+COIB1	R2	10	0	0	0	Inf	120	0	1			
 MiFishU	R1	10	0	0	0	Inf	100	0	1	30	150	190
 MiFishU	R2	10	0	0	0	Inf	100	0	1				
-12S248	R1	10	150	0	0	Inf	100	0	1	300	140	190			
-12S248	R2	10	150	0	0	Inf	100	0	1				
 12S160	R1	10	95	0	0	Inf	60	0	1	30	100	130
 12S160	R2	10	95	0	0	Inf	60	0	1			
+18SV9	R1	10	100	0	0	Inf	80	0	1	30	115	170
+18SV9	R2	10	100	0	0	Inf	80	0	1			
+MiDeca	R1	10	0	0	0	Inf	100	0	1	30	130	180	
+MiDeca	R2	10	0	0	0	Inf	100	0	1			
+Unio	R1	10	0	0	0	Inf	100	0	1	30	170	220		
+Unio	R2	10	0	0	0	Inf	100	0	1			
