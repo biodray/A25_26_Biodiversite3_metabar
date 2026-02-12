@@ -122,8 +122,9 @@ lib.ADNe <- metadata |> #dplyr::filter(Nom_projet_librairie_ADNe !=  "Contenus_P
                 Region = Region_ADNe,
                 Site = Site_echantillonnage_ADNe,
                 Sampling_site = Nom_site_reception_ADNe,
-                ID_sample_ori = Nom_reception_echantillon_ADNe
-  )
+                ID_sample_ori = Nom_reception_echantillon_ADNe,
+                Annee_echantillonnage_ADNe
+  ) |> mutate(ID_subproject = ifelse(ID_subproject == "Twells_Innu_Nation", paste(ID_subproject, Annee_echantillonnage_ADNe, sep = "_"), ID_subproject))
 
 lib.total <- bind_rows(lib.ADNe )
 
@@ -160,7 +161,7 @@ data.info  <- data.info |> mutate(#tag_fwd = Index_i7, tag_rev = Index_i5,
 data.info |>  nrow()
 lib.total |> nrow()
 
-data.info |> group_by(ID_project, ID_subproject, Loci) |> summarise(N = n())
+data.info |> group_by(ID_project, ID_subproject, ) |> summarise(N = n())
 
 data.info <- data.info |> distinct(.keep_all = T)
 
