@@ -154,7 +154,10 @@ cutadapt.multiplex(folder.in = file.path(here::here(), "00_Data", "01c_RawData_F
                    loci = LOCUS, 
                    sens = SENS, 
                    numCores = numCores,
-                   novaseq = FALSE) 
+                   novaseq = TRUE) 
+
+#extract_cutadapt_stats(folder.in = file.path(here::here(), "00_Data", "02a_Cutadapt", "log"), 
+#                       loci = LOCUS)
 
 # Extract cutadapt res
 
@@ -182,11 +185,18 @@ graph.cutadapt.1
 
 ggsave(filename = file.path(here::here(), "02_Results/02_Filtrations/", "Cutadapt_filt.png"), plot =  graph.cutadapt.1, height = 5, width = 6)
 
+data.info %>% group_by(ID_sample, Loci) %>% 
+  summarise(N = n()) %>% arrange(desc(N))
+
+#data.info <- data.info |> distinct(.keep_all = T)
+
+data.info  %>% View()
 
 graph.cutadapt.2 <- cutadapt.res %>%  
   mutate(Perc = Adapt / Raw) %>% 
-  left_join(data.info %>% select(ID_sample, Loci, ID_project, Sample_type), 
+  left_join(data.info %>% select(ID_sample, Loci, Sample_type), 
             by = c("ID_sample", "Loci")) %>% 
+  dplyr::filter(!is.na(Sample_type)) %>% 
   ggplot(aes(x = ID_sample, y = Perc, fill = Loci)) +
   geom_bar(stat = "identity") +
   geom_hline(yintercept = 0.5, lty = "dashed")+
@@ -201,13 +211,12 @@ graph.cutadapt.2
 
 ggsave(filename = file.path(here::here(), "02_Results/02_Filtrations/", "Cutadapt_prop_multiplex.png"), plot =  graph.cutadapt.2, height = 4, width = 10)
 
-
-
-
 # Running another fastqc following cutadapt
 fastqc(folder.in = file.path(here::here(), "00_Data", "02a_Cutadapt"),
        folder.out = file.path(here::here(), "02_Results", "01_FastQC", "02_Cutadapt"),
-       numCores = numCores)
+       numCores = numCores,
+       fastqc = "/media/genyoda/Fast_Storage/Backup_home/genyoda/Documents/Programs/FastQC/fastqc")
+
 
 multiqc(folder.out = file.path(here::here(), "02_Results", "01_FastQC", "02_Cutadapt"),
         loci = LOCUS, 
@@ -222,7 +231,7 @@ PARAM.DADA2
 
 dada2.filter (folder.in = file.path(here::here(), "00_Data", "02a_Cutadapt"), 
          folder.out = file.path(here::here(), "00_Data", "02b_Filtered_dada2"), 
-         loci = LOCUS, 
+         loci = LOCUS[4], 
          sens = SENS, 
          param.dada2 = PARAM.DADA2,
          numCores = numCores
@@ -273,7 +282,8 @@ ggsave(filename = file.path(here::here(), "02_Results/02_Filtrations/", "DADA2_f
 # Running another fastqc following cutadapt
 fastqc(folder.in = file.path(here::here(), "00_Data", "02b_Filtered_dada2"),
        folder.out = file.path(here::here(), "02_Results", "01_FastQC", "03_Dada2"),
-       numCores = numCores)
+       numCores = numCores,
+       fastqc = "/media/genyoda/Fast_Storage/Backup_home/genyoda/Documents/Programs/FastQC/fastqc")
 
 multiqc(folder.out = file.path(here::here(), "02_Results", "01_FastQC", "03_Dada2"),
         loci = LOCUS, 
@@ -288,7 +298,7 @@ multiqc(folder.out = file.path(here::here(), "02_Results", "01_FastQC", "03_Dada
 # Unusure if it's alway necessary to compute error rate by amplicon, but given that
 # we run amplicon of various length, I think it's necessary
 
-for(l in LOCUS){
+for(l in LOCUS[4]){
   
   cat("\nCalculting error rate for" , l, "- F\n")
   
@@ -357,7 +367,7 @@ if(length(str_subset(ls(), "err.F.")) != length(LOCUS)){
   
 }
 
-for(l in LOCUS){
+for(l in LOCUS[4]){
   
   cat("\nWorking on " , l, "\n")
   
@@ -457,6 +467,35 @@ if(length(str_subset(ls(), "seqtab.")) != length(LOCUS)){
   
 }
 
+# Unio SPECIAL CHECK
+
+cat("\nLength filtratrion for" , l, "\n")
+l <- "Unio"
+
+MINLEN <- PARAM.DADA2 %>% dplyr::filter(Locus == l, Sens == "R1") %>% pull(minESVLen)
+MAXLEN <- PARAM.DADA2 %>% dplyr::filter(Locus == l, Sens == "R1") %>% pull(maxESVLen)
+
+seqlens <- nchar(getSequences(get(paste0("seqtab.",l,".int"))))
+
+fasta <- Biostrings::readDNAStringSet("00_Data/03c_ESV/ESV.Unio.fasta")
+
+all.stat  <-   tibble(QueryAccVer = names(fasta),  Seq = as.character(fasta))  %>% 
+  left_join(tibble(Seq = getSequences(get(paste0("seqtab.",l,".int"))),  Locus = l,ESVlength = seqlens)) 
+  
+
+unio.taxo <- read_csv("02_Results/03_TaxoAssign/01_Blast_nt/TopHit.90.Unio.csv")
+
+all.stat %>% left_join(unio.taxo) %>% 
+  ggplot(aes(x =ESVlength )) +
+  geom_histogram(aes(fill = phylum)) +
+  #  geom_vline(data = PARAM.DADA2 %>% dplyr::filter(Locus %in% LOCUS, Sens == "R1"), aes(xintercept =minESVLen ), col = "darkred", lty = "dashed") +
+  # geom_vline(data = PARAM.DADA2 %>% dplyr::filter(Locus %in% LOCUS, Sens == "R1"), aes(xintercept =maxESVLen ), col = "darkred", lty = "dashed") +
+  #facet_wrap(~phylum, scale = "free_y") +
+  ggtitle("ESV filtration based on sequence length") +
+  theme_bw(base_size = 8)
+
+
+
 
 length.stat <- tibble()
 
@@ -507,7 +546,7 @@ if(length(str_subset(ls(), "seqtab.")) != length(LOCUS)*2){
 }
 
 
-for(l in LOCUS){
+for(l in LOCUS[4]){
   
   cat("\nRemoving chimera for" , l, "\n")
   
@@ -522,6 +561,11 @@ for(l in LOCUS){
   
   
 }
+
+
+#for(x in list.files(file.path(here::here(), "00_Data", "03b_SeqTab_dada2"), full.names = T, pattern = ".Rdata")){
+#  load(x)
+#}
 
 # Compute stats before and after chimera removal
 # From the N reads perspective
@@ -647,6 +691,12 @@ seq.df <- bind_rows(seq.df, seq.df.int)
 
 }
 
+seq.df %>% dplyr::filter(Loci == "Unio") %>% ggplot(aes(x = width, y = Nreads)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~Loci, scale = "free", ncol= length(LOCUS)) + 
+  labs(x = "ESV length (pb)", y = "N ESV") +
+  theme_bw()
+
 gg.seq1 <- seq.df %>% ggplot(aes(x = width)) +
   geom_bar() +
   facet_wrap(~Loci, scale = "free", ncol= length(LOCUS)) + 
@@ -688,10 +738,10 @@ cat("\nEND of 02_Process_RAW.R script\n",
     paste("Biostrings", packageVersion("Biostrings"), sep = ": "),   
     
     "\n~ External programs ~",
-    paste("fastp", system2("fastqc", "-v", stdout=T, stderr=T), sep = ": "),       
-    paste("fastqc", system2("fastqc", "-v", stdout=T, stderr=T), sep = ": "),     
-    paste("multiqc", system2("multiqc", "--version", stdout=T, stderr=T), sep = ": "),     
-    paste("cutadapt", system2("cutadapt", "--version", stdout=T, stderr=T), sep = ": "),  
+   # paste("fastp", system2("fastqc", "-v", stdout=T, stderr=T), sep = ": "),       
+  #  paste("fastqc", system2("fastqc", "-v", stdout=T, stderr=T), sep = ": "),     
+  #  paste("multiqc", system2("multiqc", "--version", stdout=T, stderr=T), sep = ": "),     
+  #  paste("cutadapt", system2("cutadapt", "--version", stdout=T, stderr=T), sep = ": "),  
     
     # Add it to the log file
     file = file.path(here::here(), "00_Data", "03c_ESV", "Process_RAW.log"), 

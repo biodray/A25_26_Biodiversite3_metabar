@@ -1,7 +1,7 @@
 #system2("fastqc", "--help")
 
 # Wrapper around FastQC
-fastqc <- function(folder.in, folder.out, numCores = 1) {
+fastqc <- function(folder.in, folder.out, numCores = 1, fastqc = "fastqc") {
   
     Nfiles <- length(list.files(folder.in, pattern = ".fastq.gz"))
     
@@ -11,7 +11,7 @@ fastqc <- function(folder.in, folder.out, numCores = 1) {
     
     temp <-  parallel::mclapply(list.files(folder.in, full.name = T, pattern = "fastq"),
                       FUN = function(i){cmd <- paste("--outdir", folder.out, i, "-q")
-                      system2("fastqc", cmd)
+                      system2(fastqc, cmd)
                       } ,
                       mc.cores = numCores
     )  

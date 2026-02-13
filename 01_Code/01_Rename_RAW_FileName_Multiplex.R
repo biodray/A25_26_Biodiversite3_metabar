@@ -19,18 +19,17 @@ data.info
 
 # Get the current names of zipped files
 
-old.names <- list.files("../Nanuq_A25_26_Biodiversite1_2",
+old.names <- list.files("../Nanuq_Biodiversite3",
                         full.name = T, 
                         pattern = ".fastq") %>% 
                         stringr::str_subset(".md5", negate = T) %>% 
-                        stringr::str_subset("i1|i2", negate = T) %>% 
-                        stringr::str_subset("NS.X0261.002", negate = F)               
+                        stringr::str_subset("i1|i2", negate = T)               
 
 head(old.names)
 length(old.names)
 
-R1.old <- paste0("../Nanuq_A25_26_Biodiversite1_2/", data.info$File, "_R1.fastq.gz")
-R2.old <- paste0("../Nanuq_A25_26_Biodiversite1_2/", data.info$File, "_R2.fastq.gz")
+R1.old <- paste0("../Nanuq_Biodiversite3/", data.info$File, "_R1.fastq.gz")
+R2.old <- paste0("../Nanuq_Biodiversite3/", data.info$File, "_R2.fastq.gz")
 
 # There should be as many times duplicated values as multiplexed loci 
 R1.old %>% length()
@@ -40,7 +39,6 @@ R2.old %>% length()
 R2.old %>% unique() %>% length()
 
 # Keep only unique R1 and R2 old value
-
 R1.old <- R1.old %>% unique()
 R2.old <- R2.old %>% unique()
 

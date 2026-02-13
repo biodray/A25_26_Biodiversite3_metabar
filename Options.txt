@@ -1,7 +1,7 @@
 # GLOBAL OPTIONS for MLI_metabar_pipeline
 # More than one loci can be analyzed at the same time, use ";" as separators.
 
-Loci: 12S160;COIB1;MiFishU;Unio
+Loci: 12S160;COIB1;MiFishU;18SV9;rbcLverte;rbcLrouge
 Sens: R1;R2
 
 # Number of Cores we can use in the analysis
@@ -40,8 +40,14 @@ dloopPvm.primers: AGCACCCAAAGCTGACATTC;CGGAGCGAGATCTAGGTACAC
 # Unio
 Unio.primers: AWGGWAGACGAAAAGACCCCGC;AAGCCAACATCGAGGTCGCAAAC
 
+rbcLbrune.primers: GAATGTGAYYTWTTTGARGAAGG;CCTTCATAAMCWACACG
+
+rbcLrouge.primers: GATATKGATYTWTTTGAAGAAGG;CCTTCRTANACWACTCK
+
+rbcLverte.primers: CCTTTAGAYTTATTTGAAGAAGG;CATTCATAMACAGCACG
+
 # Subgroup for ESV table correction
-group.metabaR: Anse_a_Beaufils;NGSL;Nmelanostomus_Parc_Canada;PPO_Charcot;Restauration_Restigouche
+group.metabaR: BDA;Biodiversite_Parc_Marin;Twells_Innu_Nation_2024;Twells_Innu_Nation_2025
 
 # Ref database path - must be set to perform these analysis
 NCBI.nt.path: /media/genyoda/Fast_Storage/Projet/Banque_REF_NCBI.git/01_Data/01_blastdb
