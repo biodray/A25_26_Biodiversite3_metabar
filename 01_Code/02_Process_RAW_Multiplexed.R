@@ -199,7 +199,7 @@ graph.cutadapt.2 <- cutadapt.res %>%
   dplyr::filter(!is.na(Sample_type)) %>% 
   ggplot(aes(x = ID_sample, y = Perc, fill = Loci)) +
   geom_bar(stat = "identity") +
-  geom_hline(yintercept = 0.5, lty = "dashed")+
+  geom_hline(yintercept = c(0.25,0.5, 0.75), lty = "dashed")+
   geom_hline(yintercept = 1, col = "red")+
   #geom_jitter(height = 0) +
   labs(y = "% of read recovery", x = "Library")+ 
@@ -229,14 +229,14 @@ multiqc(folder.out = file.path(here::here(), "02_Results", "01_FastQC", "02_Cuta
 PARAM.DADA2 <- readr::read_tsv(file.path(here::here(), "01_Code/Parameters/dada2_param.tsv"))
 PARAM.DADA2
 
-dada2.filter (folder.in = file.path(here::here(), "00_Data", "02a_Cutadapt"), 
+dada2.filter(folder.in = file.path(here::here(), "00_Data", "02a_Cutadapt"), 
          folder.out = file.path(here::here(), "00_Data", "02b_Filtered_dada2"), 
-         loci = LOCUS[4], 
+         loci = LOCUS, 
          sens = SENS, 
          param.dada2 = PARAM.DADA2,
          numCores = numCores
 )
-         
+
 # Extract dada2 summary
 dada2.summary <- data.frame()
 
@@ -298,7 +298,7 @@ multiqc(folder.out = file.path(here::here(), "02_Results", "01_FastQC", "03_Dada
 # Unusure if it's alway necessary to compute error rate by amplicon, but given that
 # we run amplicon of various length, I think it's necessary
 
-for(l in LOCUS[4]){
+for(l in LOCUS){
   
   cat("\nCalculting error rate for" , l, "- F\n")
   
@@ -367,7 +367,7 @@ if(length(str_subset(ls(), "err.F.")) != length(LOCUS)){
   
 }
 
-for(l in LOCUS[4]){
+for(l in LOCUS[5:6]){
   
   cat("\nWorking on " , l, "\n")
   
@@ -467,35 +467,6 @@ if(length(str_subset(ls(), "seqtab.")) != length(LOCUS)){
   
 }
 
-# Unio SPECIAL CHECK
-
-cat("\nLength filtratrion for" , l, "\n")
-l <- "Unio"
-
-MINLEN <- PARAM.DADA2 %>% dplyr::filter(Locus == l, Sens == "R1") %>% pull(minESVLen)
-MAXLEN <- PARAM.DADA2 %>% dplyr::filter(Locus == l, Sens == "R1") %>% pull(maxESVLen)
-
-seqlens <- nchar(getSequences(get(paste0("seqtab.",l,".int"))))
-
-fasta <- Biostrings::readDNAStringSet("00_Data/03c_ESV/ESV.Unio.fasta")
-
-all.stat  <-   tibble(QueryAccVer = names(fasta),  Seq = as.character(fasta))  %>% 
-  left_join(tibble(Seq = getSequences(get(paste0("seqtab.",l,".int"))),  Locus = l,ESVlength = seqlens)) 
-  
-
-unio.taxo <- read_csv("02_Results/03_TaxoAssign/01_Blast_nt/TopHit.90.Unio.csv")
-
-all.stat %>% left_join(unio.taxo) %>% 
-  ggplot(aes(x =ESVlength )) +
-  geom_histogram(aes(fill = phylum)) +
-  #  geom_vline(data = PARAM.DADA2 %>% dplyr::filter(Locus %in% LOCUS, Sens == "R1"), aes(xintercept =minESVLen ), col = "darkred", lty = "dashed") +
-  # geom_vline(data = PARAM.DADA2 %>% dplyr::filter(Locus %in% LOCUS, Sens == "R1"), aes(xintercept =maxESVLen ), col = "darkred", lty = "dashed") +
-  #facet_wrap(~phylum, scale = "free_y") +
-  ggtitle("ESV filtration based on sequence length") +
-  theme_bw(base_size = 8)
-
-
-
 
 length.stat <- tibble()
 
@@ -546,7 +517,7 @@ if(length(str_subset(ls(), "seqtab.")) != length(LOCUS)*2){
 }
 
 
-for(l in LOCUS[4]){
+for(l in LOCUS){
   
   cat("\nRemoving chimera for" , l, "\n")
   
@@ -691,11 +662,6 @@ seq.df <- bind_rows(seq.df, seq.df.int)
 
 }
 
-seq.df %>% dplyr::filter(Loci == "Unio") %>% ggplot(aes(x = width, y = Nreads)) +
-  geom_bar(stat = "identity") +
-  facet_wrap(~Loci, scale = "free", ncol= length(LOCUS)) + 
-  labs(x = "ESV length (pb)", y = "N ESV") +
-  theme_bw()
 
 gg.seq1 <- seq.df %>% ggplot(aes(x = width)) +
   geom_bar() +

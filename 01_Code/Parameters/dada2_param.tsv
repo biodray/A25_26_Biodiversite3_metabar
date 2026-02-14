@@ -11,3 +11,7 @@ MiDeca	R1	10	0	0	0	Inf	100	0	1	30	130	180
 MiDeca	R2	10	0	0	0	Inf	100	0	1			
 Unio	R1	10	0	0	0	Inf	100	0	1	30	170	220		
 Unio	R2	10	0	0	0	Inf	100	0	1			
+rbcLrouge	R1	10	0	0	0	Inf	80	0	1	30	170	250	
+rbcLrouge	R2	10	0	0	0	Inf	80	0	1	
+rbcLverte	R1	10	0	0	0	Inf	80	0	1	30	170	250	
+rbcLverte	R2	10	0	0	0	Inf	80	0	1			
