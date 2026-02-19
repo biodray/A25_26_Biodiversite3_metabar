@@ -50,8 +50,8 @@ data.info
 
 # Check that we can run blastX
 
-system2("blastn", "-help")
-system2('blastn', '-version')
+system2("/media/genyoda/Fast_Storage/Backup_home/genyoda/Documents/Programs/ncbi-blast-2.16.0+-src/c++/ReleaseMT/bin/blastn", "-help")
+system2("/media/genyoda/Fast_Storage/Backup_home/genyoda/Documents/Programs/ncbi-blast-2.16.0+-src/c++/ReleaseMT/bin/blastn", '-version')
 
 PARAM.BLAST <- readr::read_tsv(file.path(here::here(), "01_Code/Parameters/blast_param.tsv"))
 PARAM.BLAST$evalue <- as.character(PARAM.BLAST$evalue )
@@ -86,10 +86,8 @@ for(l in LOCUS){
                max_target_seqs = get.blast.value(l, "max_target_seqs", PARAM.BLAST),
                evalue = get.blast.value(l, "evalue", PARAM.BLAST),
                NCBI.path = NCBI.path,
-               n.cores = numCores)
-  
-  
-  
+               n.cores = numCores,
+               blastn = "/media/genyoda/Fast_Storage/Backup_home/genyoda/Documents/Programs/ncbi-blast-2.16.0+-src/c++/ReleaseMT/bin/blastn")
   
 }
 
@@ -116,7 +114,7 @@ for(l in LOCUS){
 
   cat("\nWorking on", l)
 
-  for(t in c(95,97,99)){
+  for(t in c(90, 95, 99)){
     
     print(t)
     # TOP HIT
@@ -151,6 +149,7 @@ for(l in LOCUS){
 
 readr::write_csv(RES.all.ncbi, file = file.path(res.path, paste0("RES.all.ncbi.csv")))
 
+RES.all.ncbi <- readr::read_csv(file = file.path(res.path, paste0("RES.all.ncbi.csv")))
 
 
 #Loading seq table
@@ -195,9 +194,9 @@ readr::write_csv(ESV.taxo.ALL, file = file.path(here::here(), "02_Results/03_Tax
 
 FINAL_RES <- dplyr::tibble()
 
-for(m in c("LCA", "TOP") ){
+for(m in c("TOP") ){
   
-  for(t in c(95,97,99)){
+  for(t in c(95)){
     
     RefSeq.int <- RES.all.ncbi %>% filter(Method == m, Threshold == t) %>% pull(RefSeq) %>% unique()
     
@@ -271,7 +270,7 @@ cat("\nEND of 03_TaxoAssign_Blast.R script\n",
     paste("Biostrings", packageVersion("Biostrings"), sep = ": "),     
    
     "\n~ External programs ~",
-    paste(system2("blastn", "-version", stdout=T, stderr=T), collapse = ("; ")),     
+    paste(system2("/media/genyoda/Fast_Storage/Backup_home/genyoda/Documents/Programs/ncbi-blast-2.16.0+-src/c++/ReleaseMT/bin/blastn", "-version", stdout=T, stderr=T), collapse = ("; ")),     
     paste("with the reference db:", get.blast.value(l, "db", PARAM.BLAST)),
      # Add it to the log file
     file = file.path( res.path, "TaxoAssign_Blast.log"), 

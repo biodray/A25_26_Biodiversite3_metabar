@@ -10,7 +10,8 @@ quick.blastn <- function(fasta.file, out.file,
                          max_target_seqs = 500, 
                          evalue = "1e-50",
                          NCBI.path = NCBI.path,
-                         n.cores = numCores
+                         n.cores = numCores,
+                         blastn = "blastn"
                          ){
   
   cat("\nPerforming Blast over NCBI", db, "\n")
@@ -37,7 +38,7 @@ quick.blastn <- function(fasta.file, out.file,
          }
   
   
-  A <-system2("blastn", cmd1, stdout=T, stderr=T,
+  A <-system2(blastn, cmd1, stdout=T, stderr=T,
               env = paste0("BLASTDB=", NCBI.path))
   
 }

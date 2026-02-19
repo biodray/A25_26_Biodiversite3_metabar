@@ -18,13 +18,13 @@ source(file.path(here::here(), "01_Code", "Functions", "get.value.R"))
 source(file.path(here::here(), "01_Code", "Functions", "blast.R"))
 
 
-res.path <- file.path(here::here(), "02_Results/03_TaxoAssign/03_Blast_local")
+res.path <- file.path(here::here(), "02_Results/03_TaxoAssign/03_Blast_local3")
 
 if(!file.exists(res.path)) dir.create(res.path)
 
 # Dataset -----------------------------------------------------------------
 
-NCBI.path <- get.value("NCBI.local.path")
+NCBI.path <- get.value("NCBI.local3.path")
 NCBI.path
 
 LOCUS <- stringr::str_split(get.value("Loci"), pattern = ";")[[1]]
@@ -61,7 +61,7 @@ PARAM.BLAST
 list.files(NCBI.path)
 
 # To selection another local taxonomic database
-PARAM.BLAST$db <- "Final_Marine_GSL_V04.fasta"
+PARAM.BLAST$db <- "Final_Estuary_GSL_v02.fasta"
 
 # Load taxonomy data
 
@@ -94,12 +94,11 @@ for(l in LOCUS){
                n.cores = numCores,
                blastn = "/media/genyoda/Fast_Storage/Backup_home/genyoda/Documents/Programs/ncbi-blast-2.16.0+-src/c++/ReleaseMT/bin/blastn")
   
-  
 }
 
 # Load results and add taxonomical information
-LOCUS<- LOCUS[c(1:4)]
-for(l in LOCUS[c(1:4)]){
+LOCUS <- LOCUS[c(1:4)]
+for(l in LOCUS){
   
   assign(x = paste0("RES.",l,".ncbi"), 
          value = load.blast(out.file = file.path(res.path, paste0("Blast.",l, ".raw.out")),
@@ -120,7 +119,7 @@ for(l in LOCUS){
 
 cat("\nWorking on", l)
     
-for(t in c(95,99)){
+for(t in c(90,95,99)){
 
     print(t)
     
@@ -128,7 +127,7 @@ for(t in c(95,99)){
   TOP.int <- get(paste0("RES.",l,".ncbi")) %>% BLAST_TOPHIT(threshold = t) %>% 
                 sum.BLAST() %>% 
                 dplyr::mutate(Loci = l,
-                              Script = "Blast.local",
+                              Script = "Blast.local2",
                               Method = "TOP",
                               Threshold = t,
                               RefSeq = get.blast.value(l, "db", PARAM.BLAST))
@@ -139,7 +138,7 @@ for(t in c(95,99)){
   LCA.int <- get(paste0("RES.",l,".ncbi")) %>% BLAST_LCA(threshold = t) %>% 
                 sum.BLAST() %>% 
                 dplyr::mutate(Loci = l,
-                              Script = "Blast.local",
+                              Script = "Blast.local2",
                               Method = "LCA",
                               Threshold = t,
                               RefSeq = get.blast.value(l, "db", PARAM.BLAST))
@@ -190,7 +189,7 @@ for(l in LOCUS){
   
 }
 
-readr::write_csv(ESV.taxo.ALL, file = file.path(here::here(), "02_Results/03_TaxoAssign/03_Blast_local", paste0("ESV.taxo.ALL.csv")))
+readr::write_csv(ESV.taxo.ALL, file = file.path(res.path, paste0("ESV.taxo.ALL.csv")))
 
 # Combine all datasets, but dataset by dataset to be sure to keep unassigned
 
@@ -198,7 +197,7 @@ FINAL_RES <- dplyr::tibble()
 
 for(m in c("LCA", "TOP") ){
   
-  for(t in c(95,99)){
+  for(t in c(90,95,99)){
 
     RefSeq.int <- RES.all.ncbi %>% filter(Method == m, Threshold == t) %>% pull(RefSeq) %>% unique()
     
@@ -237,7 +236,7 @@ graph1 <- FINAL_RES %>% mutate(Taxon = ifelse(is.na(Taxon), "Unknown", Taxon)) %
    mutate(Method.thresh =paste0(Method, Threshold) ) %>% 
   #filter(Method.thresh != "NANA") %>% 
   ggplot(aes(x = Method.thresh, y = Taxon, fill = Nreads)) + 
-  geom_bin2d() +
+  geom_tile() +
   scale_fill_distiller(palette = "Spectral", trans = "log10", na.value = "white") +
   facet_grid(phylum ~Loci, scale = "free", space = "free") +
   theme_bw() +

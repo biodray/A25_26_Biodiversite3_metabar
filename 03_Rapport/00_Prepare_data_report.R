@@ -112,7 +112,8 @@ names(ESV.table.control.long) <- LOCUS
 
 for (l in LOCUS) {
   MOTUs.control.table <- data.table::fread(here("00_Data", "04_ESVcorrected", paste0("MOTUs.Metabarinfo.postTagjump_", l, "_ALL.csv"))) %>% 
-    dplyr::select(ESV, Taxon, phylum, not_a_max_conta, not_an_exclude_taxa, not_detected_in_control)
+    dplyr::select(ESV, #str_subset(names(.),"Taxon"), str_subset(names(.),"phylum"), 
+                  not_a_max_conta, not_an_exclude_taxa, not_detected_in_control)
   ESV.control.table <- data.table::fread(here("00_Data", "04_ESVcorrected", paste0("ESVtab.postTagjump_", l, "_ALL.csv")))
   names(ESV.control.table)[1] <- "ID_sample"
   ESV.control.table <- ESV.control.table %>% dplyr::left_join(data.info %>% select(ID_sample, ID_subproject, Sample_type) %>% 
@@ -124,7 +125,7 @@ for (l in LOCUS) {
     dplyr::filter(Nreads > 0) %>% 
     left_join(MOTUs.control.table, by = c("ID" = "ESV")) %>%
     mutate(Loci = l,
-           Taxon= ifelse(is.na(Taxon), "Unassigned", Taxon),
+           #Taxon= ifelse(is.na(Taxon), "Unassigned", Taxon),
            Category = ifelse(not_a_max_conta == FALSE & not_an_exclude_taxa == TRUE, "Contaminant",
                              ifelse(not_a_max_conta == FALSE & not_an_exclude_taxa == FALSE, "Contaminant + exclusion taxa list",
                                     ifelse(not_a_max_conta == TRUE & not_an_exclude_taxa == FALSE, "Exclusion taxa list",       
@@ -142,9 +143,15 @@ ESV.table.control.long.df <- bind_rows(ESV.table.control.long)
 # Selectionner les projets
 
 for (proj in projets) {
-  
-  saveRDS(  ESV.table.control.long.df %>% dplyr::filter(ID_subproject %in% c(proj,  "ALL", "All", "all")), here("03_Rapport/99_Prepared", paste0("ESVtable_control_long_", proj, ".rds")))
-  
+  if(str_detect(proj, "Twells_Innu_Nation")){
+    saveRDS(  ESV.table.control.long.df %>% dplyr::filter(ID_subproject %in% c(proj,  "ALL", "All", "all", "Twells_Innu_Nation_NA")), here("03_Rapport/99_Prepared", paste0("ESVtable_control_long_", proj, ".rds")))
+    
+    
+  } else{
+    saveRDS(  ESV.table.control.long.df %>% dplyr::filter(ID_subproject %in% c(proj,  "ALL", "All", "all")), here("03_Rapport/99_Prepared", paste0("ESVtable_control_long_", proj, ".rds")))
+    
+      }
+
 }
 
 

@@ -32,9 +32,10 @@ SUBGROUP <- stringr::str_split(get.value("group.metabaR"), pattern = ";")[[1]]
 cat(length(SUBGROUP), "subgroup will be considered(", paste(SUBGROUP, collapse = ", "),")\nTheses parameters can be changed with the file Option.txt", sep = " ")
 
 data.info <- readr::read_csv(file.path(here::here(), "00_Data", "00_FileInfos", "SeqInfo.csv") )
-data.info
 
 # Create a list of which PCR to be considered in each SUBGROUP
+
+data.info$ID_subproject %>% table()
 
 SUBGROUP.ls <- list()
 
@@ -44,12 +45,19 @@ for(x in SUBGROUP){
                 data.info %>% dplyr::filter(ID_subproject == x) %>% dplyr::pull(ID_project) %>% unique(),                                                         
                 "ALL", "All", "all") %>% unique()
   
+  if(str_detect(x, "Twells_Innu_Nation" ) == T){
+  
+    subgroup <- c(subgroup, "Twells_Innu_Nation_NA") 
+      
+  }
+  
   id <- data.info %>% dplyr::filter(ID_subproject %in% subgroup)  %>% dplyr::pull(ID_sample) %>% unique()
   
   SUBGROUP.ls[[x]] <- id
   
   
 }
+data.info %>% dplyr::filter(ID_subproject == "Twells_Innu_Nation_NA") %>% dplyr::pull(ID_sample) %>% unique()
 
 # Data conversion for metabaR ---------------------------------------------
 
@@ -116,7 +124,24 @@ for(l in LOCUS){
 # Motus
 # We need to upload the right assignment method
 
-RES.all <- readr::read_csv("02_Results/03_TaxoAssign/Assignements.Final.csv")
+# Motus
+# We need to upload the right assignment method
+
+RES.marine.all <- readr::read_csv("02_Results/03_TaxoAssign/Assignements.marine.Final.csv")
+
+RES.marine.all <- RES.marine.all[!duplicated(RES.marine.all$ESV),]
+
+RES.NT.all <- readr::read_csv("02_Results/03_TaxoAssign/Assignements.NT.Final.csv")
+RES.NT.all <- RES.NT.all[!duplicated(RES.NT.all$ESV),]
+
+RES.estuary.all <- readr::read_csv("02_Results/03_TaxoAssign/Assignements.estuary.Final.csv")
+RES.estuary.all <- RES.estuary.all[!duplicated(RES.estuary.all$ESV),]
+
+RES.all <- RES.NT.all %>% 
+  left_join(RES.marine.all %>% dplyr::select(ESV, Taxon.marin = Taxon,  phylum.marin = phylum, class.marin = class, RefSeq.marin = RefSeq ) )  %>% 
+  left_join(RES.estuary.all %>% dplyr::select(ESV, Taxon.estuary = Taxon,phylum.estuary = phylum, class.estuary = class, RefSeq.estuary = RefSeq ) )
+
+
 
 
 # Assign them to an object
@@ -189,6 +214,12 @@ for(l in LOCUS){
                                            pcrs = get(paste0("pcr.", l)), 
                                            samples = get(paste0("samples.", l)))
   
+  # Enlever les MOTUs vides, mais garder tous les samples
+  # Filtrer sur les lignes (= MOTUs)
+  motus_to_keep <- rowSums(metabarlist.int$reads) > 0
+  metabarlist.int <- metabaR::subset_metabarlist(
+    metabarlist.int, "motus", indices = motus_to_keep
+  )
   
   assign(x = paste0("metabarlist.ori.", l), 
          value = metabarlist.int )
@@ -242,7 +273,8 @@ for(l in LOCUS){
   #                                             indices = (rowSums(metabarlist.int$reads)>0))
   
   # Run the tests and stores the results in a list
-  tests.tagjump <- lapply(thresholds.tag.test, function(x) metabaR::tagjumpslayer(metabarlist.int, x))
+  tests.tagjump <- lapply(thresholds.tag.test, function(x) metabaR::tagjumpslayer(subset_metabarlist(metabarlist.int, "reads", indices = (rowSums(metabarlist.int$reads)>0)), x))
+  
   # method = "cut" vs. method = "substract"
   # tests2020_substract <-lapply(thresholds, function(x) tagjumpslayer(Fish2020_clean,x, method = "substract"))
   
@@ -354,7 +386,7 @@ for(l in LOCUS){
   
   # Create the dataset to be exported
   
-  metabarlist.int.clean <- metabaR::tagjumpslayer(metabarlist.int, thresholds.tag )
+  metabarlist.int.clean <- metabaR::tagjumpslayer(subset_metabarlist(metabarlist.int, "reads", indices = (rowSums(metabarlist.int$reads)>0)), thresholds.tag )
   
   metabarlist.int.clean$pcrs$nb_reads.tagjump <- rowSums(metabarlist.int.clean$reads)
   metabarlist.int.clean$pcrs$nb_motus.tagjump <- rowSums(metabarlist.int.clean$reads>0)
@@ -410,12 +442,41 @@ for(l in LOCUS){
          height = 2.5 * n.plate,
          units = c("in"), bg = "white")
   
+  MPC.list <- list()
+  idx <- which(metabarlist.int$motus$Taxon %in% c("Ornithorhynchus anatinus", "Vombatus ursinus"))
+  
+  for(x in 1:length(thresholds.tag.test)){
+    
+    MPC.list[[x]] <- ggpcrplate.modif(tests.tagjump[[x]],
+                                      legend_title = "# reads",
+                                      FUN = function(m) {
+                                        rowSums(m$reads[, idx])
+                                      }
+    ) + ggtitle(paste("MPC:", names(tests.tagjump)[x])) + theme_bw(base_size = 8)
+    
+  }
+  
+  MPC.tag.gg   <-  ggpubr::ggarrange(MPC.list[[1]], MPC.list[[2]], MPC.list[[3]], MPC.list[[4]],
+                                     MPC.list[[5]], MPC.list[[6]], MPC.list[[7]], MPC.list[[8]],
+                                     nrow = 1, common.legend = T)
+  
+  assign(x = paste0("MPC.tag.gg.", l), 
+         value = MPC.tag.gg)
+  
+  
+  ggsave(filename = file.path(here::here(), "02_Results/04_ESVtable_correction", paste0("00_tagjump.threshold.MPC_",l, ".png")), 
+         plot = MPC.tag.gg ,
+         width =12,
+         height = 8,
+         units = c("in"),
+         bg = "white")
+  
   
 } 
 
 # Save important graph to an R object (to export it to the automatic report)
 save(list = ls(pattern = "tag.gg."),
-     file = file.path(here::here(), "02_Results/04_ESVtable_correction", "00_tag.gg.Rdata") )
+     file = file.path(here::here(), "02_Results/04_ESVtable_correction", "00_tag.gg.Rdata"))
 
 # Compute N read By plate -------------------------------------------------------------
 
@@ -617,6 +678,12 @@ for(l in LOCUS){
   
   for(x in SUBGROUP){
     
+    if((x == "BDA" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" ))  |
+       (x == "Biodiversite_Parc_Marin" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" )) |
+       (x %in% c("Twells_Innu_Nation_2024", "Twells_Innu_Nation_2025")) 
+    ){
+       
+    
     cat("Running on", x, "subgroup\n")  
     
     id.int <-  SUBGROUP.ls[[x]]
@@ -706,13 +773,13 @@ for(l in LOCUS){
     assign(x = paste0("metabarlist.tagclean.", l, ".", x), 
            value = metabarlist.int.clean.sub)
     
-  }  
+  }    }  
   
   cat("Running on overall dataset\n")  
   
   # Run contaslayer on the overall dataset
   
-  metabarlist.int  <- metabaR::contaslayer(metabarlist.int, method = "max",
+  metabarlist.int  <- metabaR::contaslayer(subset_metabarlist(metabarlist.int, "reads", indices = (rowSums(metabarlist.int$reads)>0)), method = "max",
                                   control_types = c("pcr", "extraction"),
                                   output_col = "not_a_max_conta")
   
@@ -792,6 +859,11 @@ for(l in LOCUS){
 
     for(x in SUBGROUP){
       
+      if((x == "BDA" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" ))  |
+         (x == "Biodiversite_Parc_Marin" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" )) |
+         (x %in% c("Twells_Innu_Nation_2024", "Twells_Innu_Nation_2025")) 
+      ){
+      
       cat("Running on", x, "subgroup\n")  
 
       metabarlist.int.sub <-  get(paste0("metabarlist.ori.",l,".", x))
@@ -844,7 +916,7 @@ for(l in LOCUS){
              value = metabarlist.int.clean.sub)
       
     }  
-    
+    }
     
     cat("Running on overall dataset\n")  
 
@@ -916,7 +988,12 @@ for(l in LOCUS){
   
     for(x in SUBGROUP){
       
-      cat("Running on", x, "subgroup\n")  
+      if((x == "BDA" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" ))  |
+         (x == "Biodiversite_Parc_Marin" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" )) |
+         (x %in% c("Twells_Innu_Nation_2024", "Twells_Innu_Nation_2025")) 
+      ){
+
+              cat("Running on", x, "subgroup\n")  
       
       
       
@@ -956,7 +1033,7 @@ for(l in LOCUS){
              value = metabarlist.int.clean.sub)
       
     }  
-    
+    }
     
     cat("Running on overall dataset\n")  
     
@@ -1106,6 +1183,11 @@ for(l in LOCUS){
   
   for(x in SUBGROUP){
     
+    if((x == "BDA" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" ))  |
+       (x == "Biodiversite_Parc_Marin" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" )) |
+       (x %in% c("Twells_Innu_Nation_2024", "Twells_Innu_Nation_2025")) 
+    ){
+    
     cat("Running on", x, "subgroup\n")  
     
     metabarlist.int.sub <- get(paste0("metabarlist.ori.",l, ".", x))
@@ -1197,7 +1279,7 @@ for(l in LOCUS){
            units = c("in"))
     
     cat("Figure saved:", paste0("02_Results/04_ESVtable_correction/04_conta.prop_",l,"_", x,".png"), "\n")  
-    
+    } 
   }
 }
 
@@ -1211,6 +1293,11 @@ for(l in LOCUS){
   cat("\nSummerizing contamination problems for", l, "\n\n")  
   
   for(x in SUBGROUP){
+    
+    if((x == "BDA" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" ))  |
+       (x == "Biodiversite_Parc_Marin" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" )) |
+       (x %in% c("Twells_Innu_Nation_2024", "Twells_Innu_Nation_2025")) 
+    ){
     
     cat("Running on", x, "subgroup\n")  
     
@@ -1418,7 +1505,7 @@ for(l in LOCUS){
   
   }
 }
-
+}
 
 # Apply the corrections ----------------------------------------------------
 
@@ -1444,6 +1531,11 @@ for(l in LOCUS){
   #singleton.correct <- metabar.param %>% filter(Locus == l) %>% pull(singleton.correct)
   
   for(x in SUBGROUP){
+    
+    if((x == "BDA" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" ))  |
+       (x == "Biodiversite_Parc_Marin" & l %in% c("12S160", "COIB1", "MiFishU", "18SV9" )) |
+       (x %in% c("Twells_Innu_Nation_2024", "Twells_Innu_Nation_2025")) 
+    ){
     
     cat("Running on", x, "subgroup\n")  
     
@@ -1645,7 +1737,7 @@ for(l in LOCUS){
       }
       
     }
-    
+    }
   } # End of project loop
 } # End of overall loop  
 

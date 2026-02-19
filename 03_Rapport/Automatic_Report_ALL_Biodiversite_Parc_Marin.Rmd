@@ -1,5 +1,7 @@
 ---
 output: pdf_document
+header-includes:
+  - \usepackage{tcolorbox}
 ---
 
 ```{r setup, include=FALSE}
@@ -8,22 +10,33 @@ knitr::opts_chunk$set(echo = TRUE,
                       dpi = 150)
 knitr::opts_knit$set(root.dir = here::here())
 
-`%nin%` = Negate(`%in%`)
-
-# Projet à analyser
-
-projet <- c("NGSL") 
-sequencer <- "Illumina NovaSeq PE150 1500M reads"
-
 # Données initiales
 source(file.path(here::here(), "01_Code", "Functions", "get.value.R"))
 library(tidyverse)
 library(ggforce)
 library(kableExtra)
 
-LOCUS <- stringr::str_split(get.value("Loci", file = file.path(here::here(), "Options.txt")), pattern = ";")[[1]]
+`%nin%` = Negate(`%in%`)
 
+latex_escape <- function(str) {
+  str <- gsub("\\\\", "\\\\textbackslash{}", str)
+  str <- gsub("([_#$%&{}~^])", "\\\\\\1", str)
+  str <- gsub("\n", " \\\\newline ", str)
+  return(str)
+}
+
+# Variables à définir
+
+projet <- c("Biodiversite_Parc_Marin") 
+sequencer <- "Illumina NovaSeq PE150 1500M reads"
+
+summary.msg <- latex_escape("Les résultats sont bons, seul un témoin négatif semble étrange, soit ADE_25_00711. Il est associé au site BER, est-ce possible qu'il y ait eu un échange avec l'un des échantillons?")
+
+assign.final.path <- file.path(here::here(), "02_Results/03_TaxoAssign/Assignements.estuary.Final.csv")
+
+LOCUS <- stringr::str_split(get.value("Loci", file = file.path(here::here(), "Options.txt")), pattern = ";")[[1]]
 LOCUS <- c("12S160", "MiFishU", "COIB1")
+
 
 SUBGROUP <- stringr::str_split(get.value("group.metabaR", file = file.path(here::here(), "Options.txt")), pattern = ";")[[1]]
 
@@ -45,7 +58,15 @@ for(x in SUBGROUP){
   subgroup <- c(data.info %>% dplyr::filter(ID_subproject == x) %>% pull(ID_subproject) %>% unique(),
                 data.info %>% dplyr::filter(ID_subproject == x) %>% pull(ID_project) %>% unique(),                                                         
                 "ALL", "All", "all") %>% unique()
+
   
+      if(str_detect(x, "Twells_Innu_Nation" ) == T){
+  
+    subgroup <- c(subgroup, "Twells_Innu_Nation_NA") 
+      
+  }
+  
+
   id <- data.info %>% dplyr::filter(ID_subproject %in% subgroup)  %>% pull(ID_sample) %>% unique()
   
   SUBGROUP.ls[[x]] <- id
@@ -114,6 +135,13 @@ Les résultats présentés ne doivent en aucun cas être considérés comme fina
 
 *The results presented here should not be considered final under any circumstances and cannot be published as such. They should always be interpreted with caution.*
 
+&nbsp;
+
+\begin{tcolorbox}[title=Observations relatives aux résultats, colback=white, colframe=gray, boxrule=0.5mm]
+
+`r summary.msg`
+
+\end{tcolorbox}
 
 \newpage
 
@@ -334,62 +362,44 @@ nmotus.res %>%  filter(ID_sample %in% SUBGROUP.ls[[projet]],
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-assign.1 <- stringr::str_split(get.value("assign.1", file = file.path(here::here(), "Options.txt")), pattern = ";")[[1]]
-
-assign.2 <- stringr::str_split(get.value("assign.2", file = file.path(here::here(), "Options.txt")), pattern = ";")[[1]]
-
-if(assign.1[2] == "TOP"){
-  assign.1.method <- "TopHit" 
-} else {
-    assign.1.method <- assign.1[2]
+if(file.exists(assign.final.path)){
   
+  assign.final.res <- read_csv(assign.final.path) %>% 
+    dplyr::filter(Loci %in% LOCUS)
 }
 
-if(assign.2[2] == "TOP"){
-  assign.2.method <- "TopHit" 
-} else {
-    assign.2.method <- assign.2[2]
-  
-}
+
+refseq <- assign.final.res$RefSeq %>% unique() %>% str_remove_all(".fasta")
+method <- assign.final.res$Method %>% unique()
+threshold <- assign.final.res$Threshold %>% unique()
 
 # Message si tout a été fait avec blast NCBI
-if((paste(assign.1, collapse = " ") == paste(assign.2, collapse = " ")) & (assign.1[1] == "Blast")){
+if( length(refseq) == 1 & all(refseq  == "nt")){
 
-msg1.fr <- paste("Les assignations taxonomiques utilisées dans les sections suivantes, autant pour les corrections des tables d'ESV que les assignations taxonomiques présentées, ont été effectuées à l'aide d'une version interne de la banque de séquences publiques **NCBI-nt** (alias GenBank) et l'outil d'assignation **blastn** combiné à une approche de",  paste0("**", assign.1.method), assign.1[3],"%**. Cette approche a été déterminée comme efficace au locus COI à partir d'un jeu de données du golfe Saint-Laurent. Toutefois, les résultats de ces analyses montrent aussi que les assignations à l'espèce sont de plus grande fiabilité lorsqu'une banque régionale de séquences références est utilisée.")  
+msg1.fr <- paste("Les assignations taxonomiques utilisées dans les sections suivantes, autant pour les corrections des tables d'ESV que les assignations taxonomiques présentées, ont été effectuées à l'aide d'une version interne de la banque de séquences publiques **NCBI-nt** (alias GenBank) et l'outil d'assignation **blastn** combiné à une approche de",  paste(method, threshold, collapse = " ou "), "%. Cette approche a été déterminée comme efficace au locus COI à partir d'un jeu de données du golfe Saint-Laurent. Toutefois, les résultats de ces analyses montrent aussi que les assignations à l'espèce sont de plus grande fiabilité lorsqu'une banque régionale de séquences références est utilisée.")  
 
-msg1.en <- paste("The taxonomic assignments used in the following sections, both for the corrections of the ESV tables and the taxonomic assignments presented, were performed using an internal version of the public sequence database **NCBI-nt** (alias GenBank) and the **blastn** assignment tool combined with a", paste0("**", assign.1.method), assign.1[3],"%** approach. This approach was determined to be effective for the COI locus based on a dataset from the Gulf of St. Lawrence. However, the results of these analyses also show that species-level assignments are more reliable when a regional reference sequence database is used.")
+msg1.en <- paste("The taxonomic assignments used in the following sections, both for the corrections of the ESV tables and the taxonomic assignments presented, were performed using an internal version of the public sequence database NCBI-nt (alias GenBank) and the **blastn** assignment tool combined with a", paste(method, threshold, collapse = " or "), "% approach. This approach was determined to be effective for the COI locus based on a dataset from the Gulf of St. Lawrence. However, the results of these analyses also show that species-level assignments are more reliable when a regional reference sequence database is used.")
   
 }
 
 # Message si tout a été fait avec un truc local
-if((paste(assign.1, collapse = " ") == paste(assign.2, collapse = " ")) & (assign.1[1] == "Blast.local")){
+if(  length(refseq) == 1 & all(refseq  != "nt") ){
 
-msg1.fr <- paste("Les assignations taxonomiques utilisées dans les sections suivantes, autant pour les corrections des tables d'ESV que les assignations taxonomiques présentées, ont été effectuées à l'aide d'une **banque de séquences références locales** et l'outil d'assignation **blastn** combiné à une approche de", paste0("**",  assign.final.method), assign.final[3],"%**. Bien que les banques locales peuvent être plus fiables que celles publiques, certaines précautions devraient être prises afin de s'assurer que des espèces importantes ne sont pas passées sous le radar.")  
+msg1.fr <- paste("Les assignations taxonomiques utilisées dans les sections suivantes, autant pour les corrections des tables d'ESV que les assignations taxonomiques présentées, ont été effectuées à l'aide de la **banque de séquences références locales,", refseq, "** et l'outil d'assignation **blastn** combiné à une approche de",  paste(method, threshold, collapse = ", "), "%. Bien que les banques locales peuvent être plus fiables que celles publiques, certaines précautions devraient être prises afin de s'assurer que des espèces importantes ne sont pas passées sous le radar.")  
 
-msg1.en <- paste("The taxonomic assignments used in the following sections, both for the corrections of the ESV tables and the taxonomic assignments presented, were performed using a local reference sequence database and the blastn assignment tool combined with a", paste0("", assign.final.method), assign.final[3],"% approach. While local databases can be more reliable than public ones, some precautions should be taken to ensure that important species are not overlooked.")
+msg1.en <- paste("The taxonomic assignments used in the following sections, both for the corrections of the ESV tables and the taxonomic assignments presented, were performed using the local reference sequence database", refseq,  "and the blastn assignment tool combined with a", paste(method, threshold, collapse = ", "), "% approach. While local databases can be more reliable than public ones, some precautions should be taken to ensure that important species are not overlooked.")
 
 } 
 
 # Message bonne combinaison publique et local 
 
-if((assign.2[1] == "Blast") & (assign.1[1] == "Blast.local") ){
+if( length(refseq) > 1) {
 
-msg1.fr <- paste("Les assignations taxonomiques utilisées dans les sections suivantes, autant pour les corrections des tables d'ESV que les assignations taxonomiques présentées, sont issues de séquences références locales et l'outil d'assignation **blastn** combiné à une approche de",  paste0("**", assign.1.method), assign.1[3],"%** complémenté d'une version interne de la banque de séquences publiques **NCBI-nt** (alias GenBank) et l'outil d'assignation **blastn** combiné à une approche de", paste0("**", assign.2.method), assign.2[3],"%** pour les MOTUs non-identifiés par la première approche.")
+msg1.fr <- paste("Les assignations taxonomiques utilisées dans les sections suivantes, autant pour les corrections des tables d'ESV que les assignations taxonomiques présentées, sont issues de séquences références locales provenant de", paste(refseq %>% str_subset(pattern = "nt", negate = T), collapse = ", "), "et l'outil d'assignation **blastn** combiné à une approche de",  paste( method, threshold, collapse = ", "),"% complémenté d'une version interne de la banque de séquences publiques **NCBI-nt** (alias GenBank) pour les MOTUs non-identifiés par la première approche.")
 
-msg1.en <- paste("The taxonomic assignments used in the following sections, both for the corrections of the ESV tables and the taxonomic assignments presented, are derived from local reference sequences and the **blastn** assignment tool combined with a", paste0("**", assign.1.method), assign.1[3],"%** approach supplemented by an internal version of the public sequence database **NCBI-nt** (alias GenBank) and the **blastn** assignment tool combined with a", paste0("**", assign.2.method), assign.2[3],"%** approach for MOTUs not identified by the first method.")
+msg1.en <- paste("The taxonomic assignments used in the following sections, both for the corrections of the ESV tables and the taxonomic assignments presented, are derived from the local reference sequence database", paste(refseq %>% str_subset(pattern = "nt", negate = T), collapse = ", "), "and the **blastn** assignment tool combined with a", paste(method, threshold, collapse = ", "),"% approach supplemented by an internal version of the public sequence database NCBI-nt (alias GenBank) for MOTUs not identified by the first method.")
 
 }
-
-if( "18SV9" %in% LOCUS){
-  
-msg.18.fr <- paste(" Le locus 18SV9 est l'exception, ou une assignation LCA 95% a été préféré, et il est vivement recommandé de rapport les résultats à un niveau taxonomique élevé.")  
- 
-msg.18.en <- paste(" The 18SV9 locus is an exception, where an LCA 95% assignment was preferred, and it is strongly recommended to report the results at a higher taxonomic level.") 
-
-msg1.fr <- paste0(msg1.fr, msg.18.fr )
-msg1.en <- paste0(msg1.en, msg.18.en )  
-}
-
 
 ```
 
@@ -410,19 +420,14 @@ Les assignations taxonomiques, soit la comparaison des MOTUs observées avec des
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height=7,  fig.width=7}
 
-assign.final.path <- file.path(here::here(), "02_Results/03_TaxoAssign/Assignements.marine.Final.csv")
 
-if(file.exists(assign.final.path)){
-  
-  assign.final.res <- read_csv(assign.final.path) %>% 
-    dplyr::filter(Loci %in% LOCUS)
-}
 
-if(paste(assign.2, collapse = " ") != paste(assign.1, collapse = " " )){
+#if(  length(refseq) > 1 ){
 
   assign.final.phylum <- assign.final.res %>%
       mutate(Approach = ifelse(Script == "Blast", "NCBI (Genbank)",
-                                          ifelse(Script == "Blast.local", "Banque locale", Script)),
+                                          ifelse(str_detect(Script, "Blast.local"), "Banque locale", Script)),
+             Approach = paste(Approach, Method, Threshold),
              kingdom = ifelse(kingdom == "Animalia", "Metazoa", kingdom)) %>% 
     group_by(Loci,kingdom, phylum, Approach) %>% 
     summarise(N = n()) %>% 
@@ -434,7 +439,7 @@ if(paste(assign.2, collapse = " ") != paste(assign.1, collapse = " " )){
     ggplot(aes(x = phylum, y = Prop, fill = Approach)) +
       geom_bar(stat = "identity", col = "black") +
       #facet_grid(Loci ~ ., scale = "free", space = "free")+
-    scale_fill_manual(values = c("white", "gray"))+
+    scale_fill_manual(values = c("white", "gray75", "gray50"))+
       geom_text(aes(y = 0, label = paste0("n=",Total)), vjust = 0.5, hjust = 0, angle = 0, col = "black", size = 2) +
     coord_flip() +
     facet_grid(kingdom~Loci, scale = "free", space = "free") +
@@ -445,7 +450,7 @@ if(paste(assign.2, collapse = " ") != paste(assign.1, collapse = " " )){
     theme(axis.text.x = element_text(angle = 90, h = 1, vjust = 0.5),
           strip.text.y = element_text(angle = 0))
   print(gg.taxo)
-}
+#}
 
 ```
 
@@ -471,7 +476,7 @@ if(file.exists(assign.path)){
   assign.res <- read_csv(assign.path)
    assign.res  <- assign.res %>%
                  dplyr::mutate(Approach = ifelse(Script == "Blast", "NCBI (Genbank)",
-                                          ifelse(Script == "Blast.local", "Banque locale", Script)),
+                                           "Banque locale"),
                                Method = ifelse(Method %in% c("LCA", "TOP"), paste("Blast", Method), Method),
                                RefSeq = RefSeq %>% stringr::str_remove(".fasta"))
   assign.res %>%   dplyr::select(Loci,  Approach, RefSeq, Method, Threshold) %>% dplyr::distinct(.keep_all = T) %>% 
@@ -862,6 +867,10 @@ Au delà des reads considérés comme contaminants, il peut rester certaines dé
 
 ESV.table.control.long <- readRDS(here::here("03_Rapport/99_Prepared", paste0("ESVtable_control_long_", projet, ".rds")))
 
+ESV.table.control.long <- ESV.table.control.long %>% #dplyr::select(-c(Taxon, phylum)) %>% 
+  left_join(assign.final.res %>% dplyr::select(ID = ESV, Taxon, phylum)) %>% mutate(Taxon= ifelse(is.na(Taxon), "Unassigned", Taxon))
+
+
 for(l in LOCUS){
 neg <- data.info %>% filter(ID_sample %in% SUBGROUP.ls[[projet]], 
                             Sample_type %nin% c("ECH", "POOL", "PPC", "MPC"), Loci ==l) %>% 
@@ -941,7 +950,7 @@ Des témoins positifs sont généralement ajoutés pour vérifier les profils d'
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE,  fig.height=5, fig.width=9,}
 
-ESV.table.control.long <- readRDS(here::here("03_Rapport/99_Prepared", paste0("ESVtable_control_long_", projet, ".rds")))
+#ESV.table.control.long <- readRDS(here::here("03_Rapport/99_Prepared", paste0("ESVtable_control_long_", projet, ".rds")))
 
 for(l in LOCUS){
 
@@ -1000,6 +1009,8 @@ print(graph.resi)
 }
 
 }
+
+
 ```
 
 
@@ -1040,6 +1051,7 @@ for(l in LOCUS){
     metabar.summary <- bind_rows(metabar.summary, metabar.int)    
     
   }
+  
   }
 
 metabar.summary %>%  
@@ -1067,7 +1079,7 @@ ESV.table.long <- data.frame(stringsAsFactors = F)
 
 for(l in LOCUS){
 
-MOTUs.table <- data.table::fread(file.path(here::here(), "00_Data/04_ESVcorrected", paste0("MOTUs.Metabarinfo.corrected_",l, "_",projet, ".csv")))
+#MOTUs.table <- data.table::fread(file.path(here::here(), "00_Data/04_ESVcorrected", paste0("MOTUs.Metabarinfo.corrected_",l, "_",projet, ".csv")))
 ESV.table   <- data.table::fread(file.path(here::here(), "00_Data/04_ESVcorrected", paste0("ESVtab.corrected_",l, "_",projet, ".csv")))
 names(ESV.table)[1] <- "ID_sample" 
 
@@ -1076,7 +1088,7 @@ ESV.table.long.int <- ESV.table %>% pivot_longer(-ID_sample, names_to = "ID", va
                   mutate(Loci = l, 
                          Nom_commun = NA) %>% 
                   left_join(data.info %>% select(ID_sample, ID_sample_ori, ID_project, Sample_type, Region, Site = Sampling_site, Inhibition) %>%  distinct(.keep_all = T )) %>% 
-                  left_join(MOTUs.table %>% select(-Loci), by = c("ID" = "ESV")) %>% dplyr::select(-c(AphiaID))
+                  left_join(assign.final.res %>%dplyr::filter(Loci == l) %>%  dplyr::select(-Loci), by = c("ID" = "ESV")) 
                 
 ESV.table.long <- bind_rows(ESV.table.long, ESV.table.long.int)
    
@@ -1201,7 +1213,8 @@ graph.int <-   ESV.table.long %>%
          Groupe = ifelse(Loci %in% c("MiFishU", "MiMam", "16Schord", "MiDeca", "12S160"), class, phylum)#,
          #Nreads = ifelse(Nreads == 1, 0 , Nreads)
          ) %>% filter(Loci == l,
-         phylum %in% c("Arthropoda", "Cnidaria", "Echinodermata", "Chordata", "Mollusca", "Porifera", "Nemertea", "Bryozoa", "Annelida","Brachiopoda", "Sipuncula", "Chlorophyta")) %>%
+         phylum %in% c("Arthropoda", "Cnidaria", "Echinodermata", "Chordata", "Mollusca", "Porifera", "Nemertea", "Bryozoa", "Annelida","Brachiopoda", "Sipuncula", 
+                       "Chlorophyta", "Heterokontophyta", "Cryptophyta", "Haptophyta", "Ochrophyta", "Rhodophyta"  )) %>%
   group_by(Loci, ID_sample, ID_sample_ori, Region, Site, Nom_commun, Taxon, Groupe) %>% 
   summarise(Nreads = sum(Nreads)) %>% 
   mutate(ID = ifelse(ID_sample %in% ID.inib, paste0(ID_sample_ori, "*"), ID_sample_ori)) %>% 
@@ -1281,7 +1294,7 @@ print(graph.int)
 ```{r include=FALSE}
 # En profiter pour extraire les données
 
-readr::write_csv(ESV.table.long %>% group_by(Loci, ID_sample, ID_sample_ori, Inhibition, Region, Site, Taxon, species, genus, family, order, class, phylum) %>% summarise(Nreads = sum(Nreads)), 
+readr::write_csv(ESV.table.long %>% group_by(Loci, ID_sample, ID_sample_ori, Taxon, species, genus, family, order, class, phylum) %>% summarise(Nreads = sum(Nreads)), 
                  file = paste0("03_Rapport/",projet, "_ESVtab_taxo_report.csv"))
 
 ```
