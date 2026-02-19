@@ -95,12 +95,15 @@ lib.ADN <- metadata |> dplyr::filter(Nom_projet_librairie_ADNe == "Contenus_Pbor
                 Inhibition = Inhibition_ADNe.1,
                 Cq_PCR1,
                 Nombre_cycles_PCR1,
+                Kit_extraction,
                 ID_plate = Set_index,
                 ID_well = Puits_index,
                 Index_i5,
                 Index_i7,
                 Region = Region_echantillonnage,
                 Site = Lieu_echantillonnage,
+                Latitude = Latitude_echantillonnage_DD,
+                Longitude = Longitude_echantillonnage_DD,
                 Nom_commun,
                 ID_sample_ori = Numero_reception_specimen
   )
@@ -115,20 +118,32 @@ lib.ADNe <- metadata |> #dplyr::filter(Nom_projet_librairie_ADNe !=  "Contenus_P
                 Inhibition = Inhibition_ADNe,
                 Cq_PCR1,
                 Nombre_cycles_PCR1,
+                Kit_extraction = Kit_extraction_ADNe,
                 ID_plate = Set_index,
                 ID_well = Puits_index,
                 Index_i5,
                 Index_i7,
+
                 Region = Region_ADNe,
                 Site = Site_echantillonnage_ADNe,
                 Sampling_site = Nom_site_reception_ADNe,
+                Latitude = Latitude_ADNe_DD,
+                Longitude = Longitude_ADNe_DD,
+                Trait_echantillonnage = Trait_echantillonnage_ADNe,
                 ID_sample_ori = Nom_reception_echantillon_ADNe,
-                Annee_echantillonnage_ADNe
-  ) |> mutate(ID_subproject = ifelse(ID_subproject == "Twells_Innu_Nation", paste(ID_subproject, Annee_echantillonnage_ADNe, sep = "_"), ID_subproject))
+                Annee_echantillonnage = Annee_echantillonnage_ADNe,
+                Mois_echantillonnage = Mois_echantillonnage_ADNe,
+                Jour_echantillonnage = Jour_echantillonnage_ADNe,
+                Heure_prelevement = Heure_prelevement_echantillon_ADNe,
+                Volume_filtre_L,
+                Systeme_filtration,
+                Type_filtre,
+                Pore_filtre_um,
+                Taille_filtre_mm
+
+  ) |> mutate(ID_subproject = ifelse(ID_subproject == "Twells_Innu_Nation", paste(ID_subproject, Annee_echantillonnage, sep = "_"), ID_subproject))
 
 lib.total <- bind_rows(lib.ADNe )
-
-lib.ADNe |> dplyr::filter(ID_extrait == "ADE_25_01643")
 
 
 
