@@ -7,7 +7,7 @@ rmarkdown::render(
 
 rmarkdown::render(
   input = here::here("03_Rapport/Automatic_Report_ALL_Biodiversite_Parc_Marin.Rmd"),
-  output_file = here::here("03_RapportR25-26_015_Metabarcoding_ADNe_Projet_Parc_marin_Biodiversity_COI_12SMiFish_12S160_Samuel_Turgeon.pdf")
+  output_file = here::here("03_Rapport/R25-26_015_Metabarcoding_ADNe_Projet_Parc_marin_Biodiversity_COI_12SMiFish_12S160_Samuel_Turgeon.pdf")
 )
 
 rmarkdown::render(

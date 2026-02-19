@@ -1,7 +1,5 @@
 ---
 output: pdf_document
-header-includes:
-  - \usepackage{tcolorbox}
 ---
 
 ```{r setup, include=FALSE}
@@ -10,33 +8,24 @@ knitr::opts_chunk$set(echo = TRUE,
                       dpi = 150)
 knitr::opts_knit$set(root.dir = here::here())
 
+`%nin%` = Negate(`%in%`)
+
+# Projet à analyser
+
+projet <- c("Twells_Innu_Nation_2025") 
+sequencer <- "Illumina NovaSeq PE150 1500M reads"
+
+assign.final.path <- file.path(here::here(), "02_Results/03_TaxoAssign/Assignements.NT.Final.csv")
+
 # Données initiales
 source(file.path(here::here(), "01_Code", "Functions", "get.value.R"))
 library(tidyverse)
 library(ggforce)
 library(kableExtra)
 
-`%nin%` = Negate(`%in%`)
-
-latex_escape <- function(str) {
-  str <- gsub("\\\\", "\\\\textbackslash{}", str)
-  str <- gsub("([_#$%&{}~^])", "\\\\\\1", str)
-  str <- gsub("\n", " \\\\newline ", str)
-  return(str)
-}
-
-# Variables à définir
-
-projet <- c("Twells_Innu_Nation_2025") 
-sequencer <- "Illumina NovaSeq PE150 1500M reads"
-
-summary.msg <- latex_escape("Negative samples look good. Note that the ENC were shared with the 2025 samples. \n I used LCA for the 18S to stay conservative as I doubt the reference for this marker. \n I used NCBI-nt, but a local library would probably lead to better results. \n In general the results look good :)")
-
-assign.final.path <- file.path(here::here(), "02_Results/03_TaxoAssign/Assignements.NT.Final.csv")
-
 LOCUS <- stringr::str_split(get.value("Loci", file = file.path(here::here(), "Options.txt")), pattern = ";")[[1]]
-#LOCUS <- c("12S160", "MiFishU", "COIB1")
 
+#LOCUS <- c("12S160", "MiFishU", "COIB1")
 
 SUBGROUP <- stringr::str_split(get.value("group.metabaR", file = file.path(here::here(), "Options.txt")), pattern = ";")[[1]]
 
@@ -135,13 +124,6 @@ Les résultats présentés ne doivent en aucun cas être considérés comme fina
 
 *The results presented here should not be considered final under any circumstances and cannot be published as such. They should always be interpreted with caution.*
 
-&nbsp;
-
-\begin{tcolorbox}[title=Observations relatives aux résultats, colback=white, colframe=gray, boxrule=0.5mm]
-
-`r summary.msg`
-
-\end{tcolorbox}
 
 \newpage
 
@@ -1294,8 +1276,13 @@ print(graph.int)
 ```{r include=FALSE}
 # En profiter pour extraire les données
 
-readr::write_csv(ESV.table.long %>% group_by(Loci, ID_sample, ID_sample_ori, Taxon, species, genus, family, order, class, phylum) %>% summarise(Nreads = sum(Nreads)), 
-                 file = paste0("03_Rapport/",projet, "_ESVtab_taxo_report.csv"))
+readr::write_csv(ESV.table.long %>% group_by(Loci, ID_sample, ID_sample_ori, Inhibition, Region, Site, Taxon, species, genus, family, order, class, phylum) %>% summarise(Nreads = sum(Nreads)), 
+                 file = paste0("03_Rapport/",projet, "_ESVtab_report.csv"))
+
+
+readr::write_csv( data.info %>% filter(ID_sample %in% SUBGROUP.ls[[projet]]), 
+                 file = paste0("03_Rapport/",projet, "_Metadata_report.csv"))
+
 
 ```
 
